@@ -1,0 +1,7 @@
+{
+  "name": "FaceTrack Attendance",
+  "description": "AI-powered employee attendance system using Face Recognition via Gemini. Registers employees, scans faces for check-in, and exports logs to Excel/CSV.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
