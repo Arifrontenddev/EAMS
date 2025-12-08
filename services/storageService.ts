@@ -39,11 +39,13 @@ export const exportToCSV = (records: AttendanceRecord[]): void => {
     )
   ].join('\n');
 
-  // Add BOM for Excel compatibility
+  // Add BOM (Byte Order Mark) \uFEFF for Excel compatibility so it opens with correct encoding
   const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   link.setAttribute('href', url);
+  // Using .csv extension which Excel opens by default
   link.setAttribute('download', `attendance_log_${new Date().toISOString().split('T')[0]}.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);

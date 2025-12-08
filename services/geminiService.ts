@@ -1,8 +1,8 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Employee, IdentificationResult } from '../types';
 
 // Using Gemini 2.5 Flash for multimodal analysis (Vision -> Text/JSON)
-// gemini-2.5-flash-image does not support JSON response schema
+// gemini-2.5-flash-image does not support JSON output, so we must use gemini-2.5-flash.
 const MODEL_NAME = 'gemini-2.5-flash';
 
 // We need to clean the base64 string for Gemini (remove data:image/png;base64, prefix)
@@ -45,8 +45,6 @@ export const identifyEmployeeWithGemini = async (
     ];
 
     // Then we attach reference images for context
-    // Limit to 10 employees for this demo to avoid payload size limits, 
-    // although Gemini context window is large.
     const recentEmployees = employees.slice(-10); 
     
     recentEmployees.forEach((emp, index) => {
@@ -61,6 +59,8 @@ export const identifyEmployeeWithGemini = async (
       });
     });
 
+    // Explicitly ask for JSON in the prompt to ensure structure without relying on strict responseSchema
+    // which can sometimes cause INVALID_ARGUMENT on certain model versions with Vision.
     parts.push({
       text: `
       Analyze the 'TARGET_PERSON' image and compare it against the provided Reference Images.
@@ -68,31 +68,28 @@ export const identifyEmployeeWithGemini = async (
       Your task:
       1. Determine if the TARGET_PERSON matches any of the Reference Images significantly.
       2. If a match is found, return the ID and Name of the person.
-      3. Provide a confidence score between 0 and 1.
+      3. Provide a confidence score between 0.0 and 1.0.
       4. If the person is not in the reference list or the image is unclear, return match=false.
+      
+      Output MUST be a single raw JSON object (no markdown formatting) with this structure:
+      {
+        "match": boolean,
+        "employeeId": string | null,
+        "name": string | null,
+        "confidence": number
+      }
       
       Be strict. Do not guess. If the face is obscured or different, say no match.
       `
     });
 
-    const schema: Schema = {
-      type: Type.OBJECT,
-      properties: {
-        match: { type: Type.BOOLEAN, description: "Whether a match was found in the reference list." },
-        employeeId: { type: Type.STRING, description: "The ID of the matched employee." },
-        name: { type: Type.STRING, description: "The name of the matched employee." },
-        confidence: { type: Type.NUMBER, description: "Confidence score from 0.0 to 1.0" },
-      },
-      required: ["match", "confidence"],
-    };
-
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: { parts },
       config: {
+        // Enforce JSON output format
         responseMimeType: "application/json",
-        responseSchema: schema,
-        temperature: 0.4, // Lower temperature for more deterministic/strict matching
+        temperature: 0.4, 
       },
     });
 
@@ -104,6 +101,7 @@ export const identifyEmployeeWithGemini = async (
 
   } catch (error) {
     console.error("Gemini Identification Error:", error);
+    // Return a safe fallback
     return { match: false, confidence: 0 };
   }
 };
