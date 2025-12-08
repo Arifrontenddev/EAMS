@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Employee, IdentificationResult } from '../types';
 
 // Using Gemini 2.5 Flash for multimodal analysis (Vision -> Text/JSON)
+// gemini-2.5-flash-image does not support JSON output, so we must use gemini-2.5-flash.
 const MODEL_NAME = 'gemini-2.5-flash';
 
 // We need to clean the base64 string for Gemini (remove data:image/png;base64, prefix)
@@ -59,6 +60,7 @@ export const identifyEmployeeWithGemini = async (
     });
 
     // Explicitly ask for JSON in the prompt to ensure structure without relying on strict responseSchema
+    // which can sometimes cause INVALID_ARGUMENT on certain model versions with Vision.
     parts.push({
       text: `
       Analyze the 'TARGET_PERSON' image and compare it against the provided Reference Images.
@@ -78,7 +80,6 @@ export const identifyEmployeeWithGemini = async (
       }
       
       Be strict. Do not guess. If the face is obscured or different, say no match.
-      RETURN ONLY JSON. NO MARKDOWN.
       `
     });
 
@@ -86,24 +87,17 @@ export const identifyEmployeeWithGemini = async (
       model: MODEL_NAME,
       contents: { parts },
       config: {
-        // Removed responseMimeType: "application/json" to avoid INVALID_ARGUMENT error on some model versions
+        // Enforce JSON output format
+        responseMimeType: "application/json",
         temperature: 0.4, 
       },
     });
 
-    let resultText = response.text;
+    const resultText = response.text;
     if (!resultText) throw new Error("No response from AI");
 
-    // Clean potential markdown code blocks (```json ... ```)
-    resultText = resultText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-    try {
-        const result = JSON.parse(resultText) as IdentificationResult;
-        return result;
-    } catch (e) {
-        console.error("Failed to parse JSON:", resultText);
-        throw new Error("Invalid JSON response from AI");
-    }
+    const result = JSON.parse(resultText) as IdentificationResult;
+    return result;
 
   } catch (error) {
     console.error("Gemini Identification Error:", error);
