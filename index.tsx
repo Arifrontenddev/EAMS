@@ -10,6 +10,7 @@ if (!rootElement) {
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
-  // StrictMode removed to prevent double-invocation of Camera streams which causes "Device in use" or permission errors
-  <App />
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
 );
