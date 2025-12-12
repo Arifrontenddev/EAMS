@@ -3,7 +3,7 @@ import Camera, { CameraHandle } from './Camera';
 import { identifyEmployeeWithGemini } from '../services/geminiService';
 import { saveAttendanceRecord } from '../services/storageService';
 import { Employee, AttendanceRecord } from '../types';
-import { Loader2, CheckCircle, XCircle, User, ScanFace } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, ScanFace } from 'lucide-react';
 
 interface ScannerProps {
   employees: Employee[];
@@ -57,13 +57,22 @@ const Scanner: React.FC<ScannerProps> = ({ employees, onRecordAdded }) => {
       } else {
         setLastResult({
           success: false,
-          message: "Face not recognized. Please try again or register."
+          message: "Face not recognized. Please try closer or check lighting."
         });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setLastResult({ success: false, message: "Error processing scan." });
+      let errorMessage = "Error processing scan.";
+      
+      // Provide more specific feedback for common errors
+      if (error.message.includes("API Key")) {
+        errorMessage = "System Error: API Key not configured.";
+      } else if (error.message.includes("429")) {
+        errorMessage = "Service busy. Please try again in a moment.";
+      }
+
+      setLastResult({ success: false, message: errorMessage });
     } finally {
       setIsProcessing(false);
     }
