@@ -67,7 +67,7 @@ const Scanner: React.FC<ScannerProps> = ({ employees, onRecordAdded }) => {
       
       // Provide more specific feedback for common errors
       if (error.message.includes("API Key")) {
-        errorMessage = "System Error: API Key not configured.";
+        errorMessage = "System Error: API Key not found. Please add 'API_KEY' in Vercel Environment Variables.";
       } else if (error.message.includes("429")) {
         errorMessage = "Service busy. Please try again in a moment.";
       }
