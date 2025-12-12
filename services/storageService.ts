@@ -31,19 +31,12 @@ export const deleteEmployee = (id: string): void => {
 };
 
 export const exportToCSV = (records: AttendanceRecord[]): void => {
-  // Split Timestamp into Date and Time for better Excel filtering
-  const headers = ['Record ID', 'Employee ID', 'Name', 'Date', 'Time', 'Type', 'Confidence'];
-  
+  const headers = ['Record ID', 'Employee ID', 'Name', 'Timestamp', 'Type', 'Confidence'];
   const csvContent = [
     headers.join(','),
-    ...records.map(r => {
-      const dateObj = new Date(r.timestamp);
-      const dateStr = dateObj.toLocaleDateString(); // e.g., 10/24/2023
-      const timeStr = dateObj.toLocaleTimeString(); // e.g., 2:30:00 PM
-      
-      // Escape values and wrap in quotes to handle commas safely
-      return `${r.id},${r.employeeId},"${r.employeeName}","${dateStr}","${timeStr}",${r.type},${(r.confidence * 100).toFixed(1)}%`;
-    })
+    ...records.map(r => 
+      `${r.id},${r.employeeId},${r.employeeName},${new Date(r.timestamp).toLocaleString()},${r.type},${(r.confidence * 100).toFixed(1)}%`
+    )
   ].join('\n');
 
   // Add BOM (Byte Order Mark) \uFEFF for Excel compatibility so it opens with correct encoding
